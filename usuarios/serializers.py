@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from .models import CustomUser, Agendamento, Prontuario
+from .models import Exame
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -64,5 +65,29 @@ class ProntuarioSerializer(serializers.ModelSerializer):
         
         if data['medico'].tipo_usuario != 'M':
             raise serializers.ValidationError("O profissional deve ser do tipo Médico.")
+        
+        return data
+
+class ExameSerializer(serializers.ModelSerializer):
+    paciente_nome = serializers.CharField(source='paciente.username', read_only=True)
+    medico_nome = serializers.CharField(source='medico.username', read_only=True)
+    
+    class Meta:
+        model = Exame
+        fields = [
+            'id', 'paciente', 'medico', 'paciente_nome', 'medico_nome',
+            'tipo_exame', 'nome_exame', 'descricao', 'resultado',
+            'observacoes', 'valores_referencia', 'data_solicitacao',
+            'data_realizacao', 'data_resultado', 'status', 'laboratorio'
+        ]
+        read_only_fields = ['id', 'data_solicitacao', 'paciente_nome', 'medico_nome']
+    
+    def validate(self, data):
+        if data.get('data_realizacao') and data['data_realizacao'] < timezone.now().date():
+            raise serializers.ValidationError("A data de realização não pode ser no passado.")
+        
+        if (data.get('data_realizacao') and data.get('data_resultado') and 
+            data['data_resultado'].date() < data['data_realizacao']):
+            raise serializers.ValidationError("A data do resultado deve ser após a data de realização.")
         
         return data

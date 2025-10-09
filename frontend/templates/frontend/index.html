@@ -1,0 +1,60 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🏥 SGHSS - Sistema Hospitalar</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div id="app">
+        <!-- Tela de Login -->
+        <div id="login-screen" class="screen">
+            <div class="card">
+                <h2>🏥 Login SGHSS</h2>
+                <form id="login-form">
+                    <input type="text" id="username" placeholder="Usuário" required>
+                    <input type="password" id="password" placeholder="Senha" required>
+                    <button type="submit">Entrar</button>
+                </form>
+                <div id="login-message" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Dashboard Principal -->
+        <div id="dashboard" class="screen hidden">
+            <header>
+                <h2>🏥 SGHSS - Bem-vindo, <span id="user-name"></span></h2>
+                <button onclick="logout()">Sair</button>
+            </header>
+
+            <div class="tabs">
+                <button onclick="showTab('agendamentos')">📅 Agendamentos</button>
+                <button onclick="showTab('prontuarios')">🏥 Prontuários</button>
+                <button onclick="showTab('perfil')">👤 Perfil</button>
+            </div>
+
+            <!-- Aba Agendamentos -->
+            <div id="agendamentos" class="tab-content">
+                <h3>Meus Agendamentos</h3>
+                <button onclick="criarAgendamento()">➕ Novo Agendamento</button>
+                <div id="lista-agendamentos"></div>
+            </div>
+
+            <!-- Aba Prontuários -->
+            <div id="prontuarios" class="tab-content hidden">
+                <h3>Meus Prontuários</h3>
+                <div id="lista-prontuarios"></div>
+            </div>
+
+            <!-- Aba Perfil -->
+            <div id="perfil" class="tab-content hidden">
+                <h3>Meu Perfil</h3>
+                <div id="dados-perfil"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/script.js' %}"></script>
+</body>
+</html>

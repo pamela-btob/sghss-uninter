@@ -128,3 +128,126 @@ class Prontuario(models.Model):
     
     def __str__(self):
         return f"Prontuário {self.paciente.username} - {self.titulo}"
+
+class Exame(models.Model):
+    TIPO_EXAME_CHOICES = (
+        ('sangue', 'Exame de Sangue'),
+        ('urina', 'Exame de Urina'),
+        ('imagem', 'Exame de Imagem'),
+        ('cardiologico', 'Exame Cardiológico'),
+        ('neurologico', 'Exame Neurológico'),
+        ('outros', 'Outros'),
+    )
+    
+    STATUS_EXAME_CHOICES = (
+        ('solicitado', 'Solicitado'),
+        ('coletado', 'Coletado'),
+        ('processando', 'Processando'),
+        ('finalizado', 'Finalizado'),
+        ('entregue', 'Entregue'),
+    )
+    
+    # Relacionamentos
+    paciente = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        limit_choices_to={'tipo_usuario': 'P'},
+        related_name='exames_paciente'
+    )
+    
+    medico = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        limit_choices_to={'tipo_usuario': 'M'},
+        related_name='exames_medico'
+    )
+    
+    # Informações do exame
+    tipo_exame = models.CharField(max_length=20, choices=TIPO_EXAME_CHOICES)
+    nome_exame = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True)
+    
+    # Resultados (criptografados - dados sensíveis)
+    resultado = EncryptedCharField(blank=True)
+    observacoes = EncryptedCharField(blank=True)
+    valores_referencia = EncryptedCharField(blank=True)
+    
+    # Datas importantes
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_realizacao = models.DateField(null=True, blank=True)
+    data_resultado = models.DateTimeField(null=True, blank=True)
+    
+    # Status e local
+    status = models.CharField(max_length=15, choices=STATUS_EXAME_CHOICES, default='solicitado')
+    laboratorio = models.CharField(max_length=200, blank=True)
+    
+    # Arquivos (opcional - para resultados em PDF/imagem)
+    # arquivo_resultado = models.FileField(upload_to='exames/', null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-data_solicitacao']
+        verbose_name = 'Exame'
+        verbose_name_plural = 'Exames'
+    
+    def __str__(self):
+        return f"Exame {self.nome_exame} - {self.paciente.username}"
+
+class Exame(models.Model):
+    TIPO_EXAME_CHOICES = (
+        ('sangue', 'Exame de Sangue'),
+        ('urina', 'Exame de Urina'),
+        ('imagem', 'Exame de Imagem'),
+        ('cardiologico', 'Exame Cardiológico'),
+        ('neurologico', 'Exame Neurológico'),
+        ('outros', 'Outros'),
+    )
+    
+    STATUS_EXAME_CHOICES = (
+        ('solicitado', 'Solicitado'),
+        ('coletado', 'Coletado'),
+        ('processando', 'Processando'),
+        ('finalizado', 'Finalizado'),
+        ('entregue', 'Entregue'),
+    )
+    
+    # Relacionamentos
+    paciente = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        limit_choices_to={'tipo_usuario': 'P'},
+        related_name='exames_paciente'
+    )
+    
+    medico = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        limit_choices_to={'tipo_usuario': 'M'},
+        related_name='exames_medico'
+    )
+    
+    # Informações do exame
+    tipo_exame = models.CharField(max_length=20, choices=TIPO_EXAME_CHOICES)
+    nome_exame = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True)
+    
+    # Resultados (criptografados - dados sensíveis)
+    resultado = EncryptedCharField(blank=True)
+    observacoes = EncryptedCharField(blank=True)
+    valores_referencia = EncryptedCharField(blank=True)
+    
+    # Datas importantes
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_realizacao = models.DateField(null=True, blank=True)
+    data_resultado = models.DateTimeField(null=True, blank=True)
+    
+    # Status e local
+    status = models.CharField(max_length=15, choices=STATUS_EXAME_CHOICES, default='solicitado')
+    laboratorio = models.CharField(max_length=200, blank=True)
+    
+    class Meta:
+        ordering = ['-data_solicitacao']
+        verbose_name = 'Exame'
+        verbose_name_plural = 'Exames'
+    
+    def __str__(self):
+        return f"Exame {self.nome_exame} - {self.paciente.username}"
