@@ -1,16 +1,27 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
-from .models import CustomUser, Agendamento, Prontuario, Exame
-from .serializers import UserRegistrationSerializer, AgendamentoSerializer, ProntuarioSerializer, ExameSerializer
+from django.db.models import Count
+from datetime import timedelta
+
+from .models import CustomUser, Agendamento, Prontuario, Exame, Receita
+from .serializers import (
+    UserRegistrationSerializer, AgendamentoSerializer, 
+    ProntuarioSerializer, ExameSerializer, ReceitaSerializer
+)
+from .notifications import (
+    notificar_agendamento_criado,
+    notificar_agendamento_cancelado,
+    notificar_receita_criada
+)
 
 def frontend(request):
     return render(request, 'index.html')
 
-# 1. Registro de usuário
+#Registrar o usuaário
 @api_view(['POST'])
 def user_registration(request):
     if request.method == 'POST':
@@ -22,7 +33,7 @@ def user_registration(request):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# 2. Perfil do usuário
+#Perfil do usuário
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_profile(request):
@@ -34,7 +45,7 @@ def user_profile(request):
         'message': 'Você está autenticado!'
     })
 
-# 3. Listar e criar agendamentos
+#Lista e cria os agendamentos
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def agendamento_list_create(request):
@@ -50,13 +61,24 @@ def agendamento_list_create(request):
         return Response(serializer.data)
     
     elif request.method == 'POST':
-        serializer = AgendamentoSerializer(data=request.data)
+        
+        data = request.data.copy()
+        data['medico'] = request.user.id
+        
+        serializer = AgendamentoSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            agendamento = serializer.save()
+            
+            #Notifica o agendameto criado
+            try:
+                notificar_agendamento_criado(agendamento)
+            except Exception as e:
+                print(f"Erro ao enviar notificação: {e}")
+            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# 4. Detalhe do agendamento
+#Detalehes do agendamento
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def agendamento_detail(request, pk):
@@ -84,59 +106,98 @@ def agendamento_detail(request, pk):
     elif request.method == 'DELETE':
         agendamento.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
 
+#Cancela o agendamento
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def cancelar_agendamento(request, pk):
+    try:
+        agendamento = Agendamento.objects.get(pk=pk)
+        
 
+        user = request.user
+        pode_cancelar = (
+            user.tipo_usuario == 'A' or
+            (user.tipo_usuario == 'P' and agendamento.paciente == user) or
+            (user.tipo_usuario == 'M' and agendamento.medico == user)
+        )
+        #confirma o cancelamento conforme o usuário
+        if not pode_cancelar:
+            return Response(
+                {"error": "Você não tem permissão para cancelar este agendamento."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if agendamento.status == 'cancelado':
+            return Response(
+                {"error": "Este agendamento já está cancelado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+     
+        agendamento.status = 'cancelado'
+        agendamento.motivo_cancelamento = request.data.get('motivo', 'Cancelado pelo usuário')
+        agendamento.data_cancelamento = timezone.now()
+        agendamento.save()
+        
+        #Notificação de cancelamento
+        try:
+            notificar_agendamento_cancelado(agendamento, agendamento.motivo_cancelamento)
+        except Exception as e:
+            print(f"Erro ao enviar notificação de cancelamento: {e}")
+        
+        serializer = AgendamentoSerializer(agendamento)
+        
+        return Response({
+            "message": "Agendamento cancelado com sucesso.",
+            "agendamento": serializer.data
+        })
+        
+    except Agendamento.DoesNotExist:
+        return Response(
+            {"error": "Agendamento não encontrado."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+#Criação de prontuários
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def prontuario_list_create(request):
-    """
-    Listar ou criar prontuários
-    - Pacientes veem apenas seus prontuários
-    - Médicos veem prontuários de seus pacientes
-    - Administradores veem todos
-    """
     if request.method == 'GET':
         if request.user.tipo_usuario == 'P':
             prontuarios = Prontuario.objects.filter(paciente=request.user)
         elif request.user.tipo_usuario == 'M':
             prontuarios = Prontuario.objects.filter(medico=request.user)
-        else:  # Administrador
+        else:
             prontuarios = Prontuario.objects.all()
         
         serializer = ProntuarioSerializer(prontuarios, many=True)
         return Response(serializer.data)
     
     elif request.method == 'POST':
-    # Apenas médicos podem criar prontuários
         if request.user.tipo_usuario != 'M':
             return Response(
-            {"error": "Apenas médicos podem criar prontuários."},
-            status=status.HTTP_403_FORBIDDEN
-        )
+                {"error": "Apenas médicos podem criar prontuários."},
+                status=status.HTTP_403_FORBIDDEN
+            )
     
-    # Adiciona o médico automaticamente aos dados
-    data = request.data.copy()
-    data['medico'] = request.user.id
+        data = request.data.copy()
+        data['medico'] = request.user.id
     
-    serializer = ProntuarioSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ProntuarioSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def prontuario_detail(request, pk):
-    """
-    Detalhar ou atualizar prontuário específico
-    """
     try:
         prontuario = Prontuario.objects.get(pk=pk)
     except Prontuario.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     
-    # Verifica permissão: paciente, médico responsável ou admin
     if (request.user != prontuario.paciente and 
         request.user != prontuario.medico and 
         request.user.tipo_usuario != 'A'):
@@ -147,7 +208,6 @@ def prontuario_detail(request, pk):
         return Response(serializer.data)
     
     elif request.method == 'PUT':
-        # Apenas o médico responsável pode editar
         if request.user != prontuario.medico:
             return Response(
                 {"error": "Apenas o médico responsável pode editar o prontuário."},
@@ -159,36 +219,29 @@ def prontuario_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+#Requisição de exames
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def exame_list_create(request):
-    """
-    Listar ou criar exames
-    - Pacientes veem apenas seus exames
-    - Médicos veem exames de seus pacientes
-    - Administradores veem todos
-    """
     if request.method == 'GET':
         if request.user.tipo_usuario == 'P':
             exames = Exame.objects.filter(paciente=request.user)
         elif request.user.tipo_usuario == 'M':
             exames = Exame.objects.filter(medico=request.user)
-        else:  # Administrador
+        else:
             exames = Exame.objects.all()
         
         serializer = ExameSerializer(exames, many=True)
         return Response(serializer.data)
     
     elif request.method == 'POST':
-        # Apenas médicos podem solicitar exames
         if request.user.tipo_usuario != 'M':
             return Response(
                 {"error": "Apenas médicos podem solicitar exames."},
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Adiciona o médico automaticamente aos dados
         data = request.data.copy()
         data['medico'] = request.user.id
         
@@ -201,15 +254,11 @@ def exame_list_create(request):
 @api_view(['GET', 'PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def exame_detail(request, pk):
-    """
-    Detalhar ou atualizar exame específico
-    """
     try:
         exame = Exame.objects.get(pk=pk)
     except Exame.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     
-    # Verifica permissão: paciente, médico responsável ou admin
     if (request.user != exame.paciente and 
         request.user != exame.medico and 
         request.user.tipo_usuario != 'A'):
@@ -220,7 +269,6 @@ def exame_detail(request, pk):
         return Response(serializer.data)
     
     elif request.method in ['PUT', 'PATCH']:
-        # Paciente só pode ver, médico pode editar, admin pode tudo
         if request.user.tipo_usuario == 'P':
             return Response(
                 {"error": "Pacientes não podem editar exames."},
@@ -233,27 +281,22 @@ def exame_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+#Dashboard do administrador
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_estatisticas(request):
-    """
-    Dashboard administrativo com estatísticas do sistema
-    Apenas administradores podem acessar
-    """
     if request.user.tipo_usuario != 'A':
         return Response(
             {"error": "Apenas administradores podem acessar o dashboard."},
             status=status.HTTP_403_FORBIDDEN
         )
     
-    # Estatísticas de usuários
     total_usuarios = CustomUser.objects.count()
     total_pacientes = CustomUser.objects.filter(tipo_usuario='P').count()
     total_medicos = CustomUser.objects.filter(tipo_usuario='M').count()
     total_administradores = CustomUser.objects.filter(tipo_usuario='A').count()
     
-    # Estatísticas de agendamentos
     total_agendamentos = Agendamento.objects.count()
     agendamentos_hoje = Agendamento.objects.filter(
         data_agendamento__date=timezone.now().date()
@@ -263,44 +306,35 @@ def dashboard_estatisticas(request):
         data_agendamento__year=timezone.now().year
     ).count()
     
-    # Estatísticas por status de agendamento
     agendamentos_agendados = Agendamento.objects.filter(status='agendado').count()
     agendamentos_confirmados = Agendamento.objects.filter(status='confirmado').count()
     agendamentos_realizados = Agendamento.objects.filter(status='realizado').count()
     agendamentos_cancelados = Agendamento.objects.filter(status='cancelado').count()
     
-    # Estatísticas de prontuários
     total_prontuarios = Prontuario.objects.count()
     prontuarios_mes = Prontuario.objects.filter(
         criado_em__month=timezone.now().month,
         criado_em__year=timezone.now().year
     ).count()
     
-    # Estatísticas de exames
     total_exames = Exame.objects.count()
     exames_solicitados = Exame.objects.filter(status='solicitado').count()
     exames_finalizados = Exame.objects.filter(status='finalizado').count()
     
-    # Tipos de consulta mais comuns
     consultas_presencial = Agendamento.objects.filter(tipo_consulta='presencial').count()
     consultas_telemedicina = Agendamento.objects.filter(tipo_consulta='telemedicina').count()
     
-    # Exames mais solicitados
-    from django.db.models import Count
     exames_mais_solicitados = Exame.objects.values('tipo_exame').annotate(
         total=Count('id')
     ).order_by('-total')[:5]
     
     dados = {
-        # Usuários
         "usuarios": {
             "total": total_usuarios,
             "pacientes": total_pacientes,
             "medicos": total_medicos,
             "administradores": total_administradores
         },
-        
-        # Agendamentos
         "agendamentos": {
             "total": total_agendamentos,
             "hoje": agendamentos_hoje,
@@ -316,22 +350,16 @@ def dashboard_estatisticas(request):
                 "telemedicina": consultas_telemedicina
             }
         },
-        
-        # Prontuários
         "prontuarios": {
             "total": total_prontuarios,
             "este_mes": prontuarios_mes
         },
-        
-        # Exames
         "exames": {
             "total": total_exames,
             "solicitados": exames_solicitados,
             "finalizados": exames_finalizados,
             "mais_solicitados": list(exames_mais_solicitados)
         },
-        
-        # Metadados
         "metadados": {
             "data_geracao": timezone.now(),
             "periodo": "todo o período"
@@ -343,17 +371,12 @@ def dashboard_estatisticas(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def relatorio_agendamentos(request):
-    """
-    Relatório detalhado de agendamentos
-    Filtros por período, médico, status
-    """
     if request.user.tipo_usuario != 'A':
         return Response(
             {"error": "Apenas administradores podem acessar relatórios."},
             status=status.HTTP_403_FORBIDDEN
         )
     
-    # Filtros opcionais
     data_inicio = request.GET.get('data_inicio')
     data_fim = request.GET.get('data_fim')
     medico_id = request.GET.get('medico_id')
@@ -361,7 +384,6 @@ def relatorio_agendamentos(request):
     
     agendamentos = Agendamento.objects.all()
     
-    # Aplicar filtros
     if data_inicio:
         agendamentos = agendamentos.filter(data_agendamento__date__gte=data_inicio)
     if data_fim:
@@ -371,10 +393,8 @@ def relatorio_agendamentos(request):
     if status_agendamento:
         agendamentos = agendamentos.filter(status=status_agendamento)
     
-    # Serializar dados
     serializer = AgendamentoSerializer(agendamentos, many=True)
     
-    # Estatísticas do relatório filtrado
     total = agendamentos.count()
     por_status = agendamentos.values('status').annotate(total=Count('id'))
     por_tipo = agendamentos.values('tipo_consulta').annotate(total=Count('id'))
@@ -399,22 +419,16 @@ def relatorio_agendamentos(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def relatorio_financeiro(request):
-    """
-    Relatório financeiro simulado (para demonstração)
-    Em um sistema real, integraria com módulo financeiro
-    """
     if request.user.tipo_usuario != 'A':
         return Response(
             {"error": "Apenas administradores podem acessar relatórios financeiros."},
             status=status.HTTP_403_FORBIDDEN
         )
     
-    # Dados simulados para demonstração
-    # Em um sistema real, isso viria de um módulo financeiro
     receita_mensal = {
-        "consultas_presencial": 150 * 120.00,  # 150 consultas a R$ 120,00
-        "consultas_telemedicina": 80 * 80.00,   # 80 consultas a R$ 80,00
-        "exames": 45 * 50.00,                   # 45 exames a R$ 50,00
+        "consultas_presencial": 150 * 120.00,
+        "consultas_telemedicina": 80 * 80.00,
+        "exames": 45 * 50.00,
         "total": (150 * 120.00) + (80 * 80.00) + (45 * 50.00)
     }
     
@@ -437,3 +451,262 @@ def relatorio_financeiro(request):
     }
     
     return Response(relatorio_financeiro)
+
+#Histórico do paciente
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def historico_paciente(request, paciente_id=None):
+    user = request.user
+    
+    try:
+        if paciente_id:
+            if user.tipo_usuario not in ['A', 'M']:
+                return Response(
+                    {"error": "Apenas administradores e médicos podem visualizar histórico de outros pacientes."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            try:
+                paciente = CustomUser.objects.get(id=paciente_id)
+                if paciente.tipo_usuario != 'P':
+                    return Response(
+                        {"error": "O ID especificado não pertence a um paciente."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except CustomUser.DoesNotExist:
+                return Response(
+                    {"error": "Paciente não encontrado."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            if user.tipo_usuario != 'P':
+                return Response(
+                    {"error": "Apenas pacientes podem visualizar próprio histórico sem especificar ID."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            paciente = user
+        
+        paciente_data = {
+            "id": paciente.id,
+            "nome": paciente.get_full_name() or paciente.username,
+            "email": paciente.email,
+            "data_cadastro": paciente.date_joined,
+            "tipo_usuario": paciente.get_tipo_usuario_display(),
+            "tipo_sanguineo": getattr(paciente, 'tipo_sanguineo', 'Não informado'),
+            "alergias": getattr(paciente, 'alergias', 'Não informado')
+        }
+        
+        prontuarios = Prontuario.objects.filter(paciente=paciente).order_by('-criado_em')
+        prontuarios_data = ProntuarioSerializer(prontuarios, many=True).data
+        
+        exames = Exame.objects.filter(paciente=paciente).order_by('-data_solicitacao')
+        exames_data = ExameSerializer(exames, many=True).data
+        
+        trinta_dias_atras = timezone.now() - timedelta(days=30)
+        agendamentos = Agendamento.objects.filter(
+            paciente=paciente, 
+            data_agendamento__gte=trinta_dias_atras
+        ).order_by('-data_agendamento')
+        agendamentos_data = AgendamentoSerializer(agendamentos, many=True).data
+        
+        total_consultas = Agendamento.objects.filter(
+            paciente=paciente, 
+            status='realizado'
+        ).count()
+        
+        total_exames = Exame.objects.filter(paciente=paciente).count()
+        
+        consultas_presencial = Agendamento.objects.filter(
+            paciente=paciente, 
+            tipo_consulta='presencial',
+            status='realizado'
+        ).count()
+        
+        consultas_telemedicina = Agendamento.objects.filter(
+            paciente=paciente, 
+            tipo_consulta='telemedicina', 
+            status='realizado'
+        ).count()
+        
+        exames_solicitados = Exame.objects.filter(
+            paciente=paciente, 
+            status='solicitado'
+        ).count()
+        
+        exames_finalizados = Exame.objects.filter(
+            paciente=paciente, 
+            status='finalizado'
+        ).count()
+        
+        historico = {
+            "paciente": paciente_data,
+            "estatisticas": {
+                "total_consultas": total_consultas,
+                "total_exames": total_exames,
+                "consultas_presencial": consultas_presencial,
+                "consultas_telemedicina": consultas_telemedicina,
+                "exames_solicitados": exames_solicitados,
+                "exames_finalizados": exames_finalizados,
+            },
+            "prontuarios": prontuarios_data,
+            "exames": exames_data,
+            "agendamentos_recentes": agendamentos_data,
+            "metadados": {
+                "data_consulta": timezone.now(),
+                "periodo_agendamentos": "últimos 30 dias",
+                "total_prontuarios": len(prontuarios_data),
+                "total_exames": len(exames_data),
+                "visualizado_por": user.username,
+                "tipo_visualizador": user.get_tipo_usuario_display()
+            }
+        }
+        
+        return Response(historico)
+        
+    except Exception as e:
+        return Response(
+            {"error": f"Erro ao gerar histórico: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+#Receitas médicas
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def receita_list_create(request):
+    if request.method == 'GET':
+        user = request.user
+        
+        if user.tipo_usuario == 'P':
+            receitas = Receita.objects.filter(paciente=user)
+        elif user.tipo_usuario == 'M':
+            receitas = Receita.objects.filter(medico=user)
+        elif user.tipo_usuario == 'A':
+            receitas = Receita.objects.all()
+        else:
+            return Response(
+                {"error": "Tipo de usuário não permitido."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        status_filter = request.GET.get('status')
+        tipo_filter = request.GET.get('tipo')
+        paciente_filter = request.GET.get('paciente_id')
+        
+        if status_filter:
+            receitas = receitas.filter(status=status_filter)
+        if tipo_filter:
+            receitas = receitas.filter(tipo=tipo_filter)
+        if paciente_filter and user.tipo_usuario in ['M', 'A']:
+            receitas = receitas.filter(paciente_id=paciente_filter)
+        
+        receitas = receitas.order_by('-data_prescricao')
+        
+        serializer = ReceitaSerializer(receitas, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        if request.user.tipo_usuario != 'M':
+            return Response(
+                {"error": "Apenas médicos podem criar receitas."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = ReceitaSerializer(data=request.data)
+        if serializer.is_valid():
+            receita = serializer.save(medico=request.user)
+            
+   
+            try:
+                notificar_receita_criada(receita)
+            except Exception as e:
+                print(f"Erro ao enviar notificação de receita: {e}")
+                
+            return Response(
+                ReceitaSerializer(receita).data, 
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def receita_detail(request, pk):
+    try:
+        receita = Receita.objects.get(pk=pk)
+    except Receita.DoesNotExist:
+        return Response(
+            {"error": "Receita não encontrada."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    user = request.user
+    pode_acessar = (
+        user.tipo_usuario == 'A' or
+        receita.medico == user or
+        receita.paciente == user
+    )
+    
+    if not pode_acessar:
+        return Response(
+            {"error": "Você não tem permissão para acessar esta receita."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    if request.method == 'GET':
+        serializer = ReceitaSerializer(receita)
+        return Response(serializer.data)
+    
+    elif request.method in ['PUT', 'PATCH']:
+        if user.tipo_usuario not in ['A', 'M'] or (user.tipo_usuario == 'M' and receita.medico != user):
+            return Response(
+                {"error": "Apenas o médico prescritor ou administradores podem editar receitas."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = ReceitaSerializer(
+            receita, 
+            data=request.data, 
+            partial=request.method == 'PATCH'
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        if user.tipo_usuario != 'A':
+            return Response(
+                {"error": "Apenas administradores podem deletar receitas."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        receita.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def suspender_receita(request, pk):
+    try:
+        receita = Receita.objects.get(pk=pk)
+    except Receita.DoesNotExist:
+        return Response(
+            {"error": "Receita não encontrada."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    user = request.user
+    pode_suspender = (
+        user.tipo_usuario == 'A' or 
+        (user.tipo_usuario == 'M' and receita.medico == user)
+    )
+    
+    if not pode_suspender:
+        return Response(
+            {"error": "Apenas o médico prescritor ou administradores podem suspender receitas."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    receita.suspender()
+    serializer = ReceitaSerializer(receita)
+    return Response({
+        "message": "Receita suspensa com sucesso.",
+        "receita": serializer.data
+    })

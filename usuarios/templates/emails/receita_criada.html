@@ -1,0 +1,32 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>💊 Nova Receita Médica</h2>
+
+<p>Olá, <strong>{{ paciente_nome }}</strong>!</p>
+
+<p>O Dr. {{ medico_nome }} emitiu uma nova receita para você:</p>
+
+<div class="info-box">
+    <p><strong>Título:</strong> {{ titulo_receita }}</p>
+    <p><strong>Tipo:</strong> {{ tipo_receita }}</p>
+    <p><strong>Data de Validade:</strong> {{ data_validade }}</p>
+    <p><strong>Nº da Receita:</strong> #{{ receita_id }}</p>
+</div>
+
+{% if descricao %}
+<p><strong>Descrição:</strong><br>{{ descricao }}</p>
+{% endif %}
+
+<p><strong>⚠️ Importante:</strong></p>
+<ul>
+    <li>Esta receita é válida até {{ data_validade }}</li>
+    <li>Apresente-a na farmácia ou laboratório</li>
+    <li>Siga rigorosamente as orientações médicas</li>
+    <li>Em caso de dúvidas, entre em contato com o médico</li>
+</ul>
+
+<a href="#" class="button">Visualizar Receita Completa</a>
+
+<p>Atenciosamente,<br>Equipe VidaPlus Hospital</p>
+{% endblock %}

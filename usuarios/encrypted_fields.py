@@ -5,10 +5,10 @@ import base64
 import os
 from django.db import models
 
-# Gera uma chave Fernet válida a partir de uma senha
+#Gera uma chave Fernet válida a partir de uma senha
 def generate_fernet_key():
-    password = b"minha_senha_secreta_sghss_2025"  # Em produção, use variável de ambiente
-    salt = b"sghss_salt_2025"  # Em produção, use um salt único
+    password = b"minha_senha_secreta_sghss_2025"  
+    salt = b"sghss_salt_2025"  
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
@@ -28,24 +28,24 @@ class EncryptedField(models.CharField):
     def get_prep_value(self, value):
         if value is None or value == "":
             return value
-        # Criptografa o valor antes de salvar no banco
+        #Criptografa
         try:
             encrypted_value = self.cipher.encrypt(value.encode('utf-8'))
             return base64.urlsafe_b64encode(encrypted_value).decode('utf-8')
         except Exception as e:
-            # Se der erro na criptografia, retorna o valor original
+            #Se der erro na criptografia, retorna o valor original
             print(f"Erro na criptografia: {e}")
             return value
     
     def from_db_value(self, value, expression, connection):
         if value is None or value == "":
             return value
-        # Descriptografa o valor ao ler do banco
+        #Descriptografa
         try:
             encrypted_value = base64.urlsafe_b64decode(value.encode('utf-8'))
             decrypted_value = self.cipher.decrypt(encrypted_value)
             return decrypted_value.decode('utf-8')
         except Exception as e:
-            # Se der erro na descriptografia, retorna o valor criptografado
+            #Se der erro na descriptografia, retorna o valor criptografado
             print(f"Erro na descriptografia: {e}")
             return value

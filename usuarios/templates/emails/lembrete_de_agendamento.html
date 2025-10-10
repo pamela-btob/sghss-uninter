@@ -1,0 +1,38 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>⏰ Lembrete de Consulta</h2>
+
+<p>Olá, <strong>{{ paciente_nome }}</strong>!</p>
+
+<p>Este é um lembrete da sua consulta agendada para <strong>amanhã</strong>:</p>
+
+<div class="info-box">
+    <p><strong>Médico:</strong> Dr. {{ medico_nome }}</p>
+    <p><strong>Data e Horário:</strong> {{ data_agendamento }}</p>
+    <p><strong>Tipo de Consulta:</strong> {{ tipo_consulta }}</p>
+    <p><strong>Local:</strong> {{ local }}</p>
+    <p><strong>Nº do Agendamento:</strong> #{{ agendamento_id }}</p>
+</div>
+
+<p><strong>Preparação para a consulta:</strong></p>
+<ul>
+    {% if tipo_consulta == 'presencial' %}
+    <li>Chegar com 15 minutos de antecedência</li>
+    <li>Levar documentos e exames recentes</li>
+    <li>Ter à mão lista de medicamentos em uso</li>
+    <li>Anote suas dúvidas para não esquecer</li>
+    {% else %}
+    <li>Se for telemedicina, por favor</li>
+    <li> Testar câmera e microfone antecipadamente</li>
+    <li>Estar em local tranquilo e com boa iluminação</li>
+    
+    {% endif %}
+</ul>
+
+<a href="#" class="button">Ver Detalhes da Consulta</a>
+
+<p>Para cancelamentos, entre em contato com pelo menos 2 horas de antecedência.</p>
+
+<p>Atenciosamente,<br>Equipe VidaPlus Hospital</p>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>✅ Agendamento Confirmado</h2>
+
+<p>Olá, <strong>{{ paciente_nome }}</strong>!</p>
+
+<p>Seu agendamento foi realizado com sucesso:</p>
+
+<div class="info-box">
+    <p><strong>Médico:</strong> Dr. {{ medico_nome }}</p>
+    <p><strong>Data e Horário:</strong> {{ data_agendamento }}</p>
+    <p><strong>Tipo de Consulta:</strong> {{ tipo_consulta }}</p>
+    <p><strong>Local:</strong> {{ local }}</p>
+    <p><strong>Nº do Agendamento:</strong> #{{ agendamento_id }}</p>
+</div>
+
+<p><strong>Instruções importantes:</strong></p>
+<ul>
+    {% if tipo_consulta == 'presencial' %}
+    <li>Chegar com 15 minutos de antecedência</li>
+    <li>Trazer documentos e carteirinha do convênio</li>
+    <li>Usar máscara é opcional</li>
+    {% else %}
+    <li>Testar conexão de internet antes da consulta</li>
+    <li>Estar em ambiente tranquilo e privativo</li>
+    <li>Ter documentos em mãos para eventual identificação</li>
+    {% endif %}
+</ul>
+
+<p>Para cancelar ou reagendar, entre em contato conosco com pelo menos 2 horas de antecedência.</p>
+
+<a href="#" class="button">Ver Detalhes do Agendamento</a>
+
+<p>Atenciosamente,<br>Equipe VidaPlus Hospital</p>
+{% endblock %}

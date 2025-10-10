@@ -29,26 +29,23 @@ class SecurityTests(APITestCase):
             row = cursor.fetchone()
             cpf_criptografado = row[0]
             
-        # Verifica se está criptografado (não é o CPF original)
+        #Verifica criptografia
         self.assertNotEqual(cpf_criptografado, '123.456.789-00')
         self.assertTrue(len(cpf_criptografado) > 20)
 
     def test_access_control_patient(self):
-        """Testa que paciente não pode acessar dados de outros pacientes"""
         self.client.force_authenticate(user=self.paciente)
         
-        # Tenta acessar lista de usuários (deveria ser negado)
+        #Tenta acessar lista de usuários 
         response = self.client.get('/api/usuarios/')
         self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
 
     def test_invalid_token_rejected(self):
-        """Testa que token inválido é rejeitado"""
         self.client.credentials(HTTP_AUTHORIZATION='Bearer token_invalido_123')
         response = self.client.get('/api/usuarios/perfil/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_missing_token_rejected(self):
-        """Testa que requisição sem token é rejeitada"""
         self.client.credentials()
         response = self.client.get('/api/usuarios/perfil/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -63,7 +60,6 @@ class BusinessLogicTests(APITestCase):
         )
 
     def test_appointment_past_date_validation(self):
-        """Testa que não pode criar agendamento no passado"""
         self.client.force_authenticate(user=self.paciente)
         
         agendamento_data = {
@@ -77,7 +73,6 @@ class BusinessLogicTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_patient_cannot_create_medical_record(self):
-        """Testa que paciente não pode criar prontuário"""
         self.client.force_authenticate(user=self.paciente)
         
         prontuario_data = {
@@ -92,7 +87,6 @@ class BusinessLogicTests(APITestCase):
 
 class BasicTests(APITestCase):
     def test_user_registration(self):
-        """Teste básico de registro de usuário"""
         user_data = {
             'username': 'testuser',
             'email': 'test@email.com',
@@ -107,15 +101,13 @@ class BasicTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_user_login(self):
-        """Teste básico de login"""
-        # Primeiro cria o usuário
         user = CustomUser.objects.create_user(
             username='loginuser', 
             password='Senha123@', 
             tipo_usuario='P'
         )
         
-        # Faz login
+        #Faz login
         login_data = {
             'username': 'loginuser',
             'password': 'Senha123@'

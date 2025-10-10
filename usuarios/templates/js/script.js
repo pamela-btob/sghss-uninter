@@ -1,8 +1,8 @@
-const API_URL = 'http://127.0.0.1:8000';  // ← SEM /api NO FINAL
+const API_URL = 'http://127.0.0.1:8000'; 
 let token = localStorage.getItem('token');
 let currentUser = null;
 
-// Inicialização
+//Pagina de login inicial
 document.addEventListener('DOMContentLoaded', function() {
     if (token) {
         carregarPerfil();
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Login
+//Login
 document.getElementById('login-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -19,7 +19,7 @@ document.getElementById('login-form').addEventListener('submit', async function(
     const password = document.getElementById('password').value;
 
     try {
-        const response = await fetch(`${API_URL}/api/token/`, {  // ← /api/token/
+        const response = await fetch(`${API_URL}/api/token/`, {  
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -42,10 +42,10 @@ document.getElementById('login-form').addEventListener('submit', async function(
     }
 });
 
-// Carregar perfil do usuário
+//Carrega o perfil do usuário
 async function carregarPerfil() {
     try {
-        const response = await fetch(`${API_URL}/api/usuarios/perfil/`, {  // ← /api/usuarios/perfil/
+        const response = await fetch(`${API_URL}/api/usuarios/perfil/`, { 
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -66,10 +66,10 @@ async function carregarPerfil() {
     }
 }
 
-// Carregar agendamentos
+//Carrega os agendamentos
 async function carregarAgendamentos() {
     try {
-        const response = await fetch(`${API_URL}/api/agendamentos/`, {  // ← /api/agendamentos/
+        const response = await fetch(`${API_URL}/api/agendamentos/`, {  
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -96,10 +96,10 @@ async function carregarAgendamentos() {
     }
 }
 
-// Carregar prontuários
+//Carrega os prontuários
 async function carregarProntuarios() {
     try {
-        const response = await fetch(`${API_URL}/api/prontuarios/`, {  // ← /api/prontuarios/
+        const response = await fetch(`${API_URL}/api/prontuarios/`, { 
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -127,7 +127,7 @@ async function carregarProntuarios() {
     }
 }
 
-// Funções de navegação (mantenha as mesmas)
+//Funções de navegação
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.add('hidden');

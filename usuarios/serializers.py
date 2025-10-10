@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
-from .models import CustomUser, Agendamento, Prontuario
+from .models import CustomUser, Agendamento, Prontuario, Receita
 from .models import Exame
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -59,12 +59,12 @@ class ProntuarioSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'criado_em', 'paciente_nome', 'medico_nome', 'agendamento_data']
     
     def validate(self, data):
-        # Verifica se o médico tem permissão para acessar este paciente
+        #Verifica se o médico tem permissão para acessar este paciente
         if data['paciente'].tipo_usuario != 'P':
-            raise serializers.ValidationError("O paciente deve ser do tipo Paciente.")
+            raise serializers.ValidationError("Você não tem permissão")
         
         if data['medico'].tipo_usuario != 'M':
-            raise serializers.ValidationError("O profissional deve ser do tipo Médico.")
+            raise serializers.ValidationError("Você não tem permissão")
         
         return data
 
@@ -84,10 +84,49 @@ class ExameSerializer(serializers.ModelSerializer):
     
     def validate(self, data):
         if data.get('data_realizacao') and data['data_realizacao'] < timezone.now().date():
-            raise serializers.ValidationError("A data de realização não pode ser no passado.")
+            raise serializers.ValidationError("A data de realização não pode ser anterior a data atual.")
         
         if (data.get('data_realizacao') and data.get('data_resultado') and 
             data['data_resultado'].date() < data['data_realizacao']):
-            raise serializers.ValidationError("A data do resultado deve ser após a data de realização.")
+            raise serializers.ValidationError("A data do resultado deve ser após a data de realização do exame.")
+        
+        return data
+    
+class ReceitaSerializer(serializers.ModelSerializer):
+    paciente_nome = serializers.CharField(source='paciente.get_full_name', read_only=True)
+    medico_nome = serializers.CharField(source='medico.get_full_name', read_only=True)
+    esta_valida = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = Receita
+        fields = [
+            'id',
+            'paciente', 'paciente_nome',
+            'medico', 'medico_nome',
+            'tipo', 'titulo', 'descricao',
+            'medicamentos', 'posologia',
+            'exames_solicitados',
+            'data_prescricao', 'data_validade',
+            'status', 'observacoes',
+            'prontuario', 'esta_valida',
+            'criado_em', 'atualizado_em'
+        ]
+        read_only_fields = ['data_prescricao', 'criado_em', 'atualizado_em']
+    
+    def validate_data_validade(self, value):
+        
+        from django.utils import timezone
+        if value < timezone.now().date():
+            raise serializers.ValidationError("A data não pode ser anterior a data atual.")
+        return value
+    
+    def validate(self, data):
+        
+        #Verificar se médico ou paciente está solicitando
+        if data.get('medico') and data['medico'].tipo_usuario != 'M':
+            raise serializers.ValidationError({"medico": "O prescritor deve ser um médico."})
+        
+        if data.get('paciente') and data['paciente'].tipo_usuario != 'P':
+            raise serializers.ValidationError({"paciente": "O destinatário deve ser um paciente."})
         
         return data

@@ -15,6 +15,8 @@ from usuarios.views import (
     dashboard_estatisticas,    
     relatorio_agendamentos,    
     relatorio_financeiro,
+    cancelar_agendamento,
+    historico_paciente,
 )
 
 urlpatterns = [
@@ -33,4 +35,7 @@ urlpatterns = [
     path('api/admin/dashboard/', dashboard_estatisticas, name='dashboard-estatisticas'),
     path('api/admin/relatorios/agendamentos/', relatorio_agendamentos, name='relatorio-agendamentos'),
     path('api/admin/relatorios/financeiro/', relatorio_financeiro, name='relatorio-financeiro'),
+    path('api/agendamentos/<int:pk>/cancelar/', cancelar_agendamento, name='cancelar-agendamento'),
+    path('api/pacientes/<int:paciente_id>/historico/', historico_paciente, name='historico-paciente'),
+    path('api/pacientes/historico/', historico_paciente, name='meu-historico'), 
 ]
