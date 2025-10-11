@@ -1,6 +1,5 @@
-{% extends "emails/base_email.html" %}
-
-{% block content %}
+{% load static %}
+<link rel="stylesheet" href="/static/css/style.css">
 <h2>🔬 Exame Solicitado</h2>
 <p>Olá, <strong>{{ paciente_nome }}</strong>!</p>
 <p>O Dr. {{ medico_nome }} solicitou um exame para você:</p>
@@ -10,4 +9,3 @@
     <p><strong>Instruções:</strong> {{ instrucoes }}</p>
 </div>
 <p>Atenciosamente,<br>Equipe VidaPlus Hospital</p>
-{% endblock %}

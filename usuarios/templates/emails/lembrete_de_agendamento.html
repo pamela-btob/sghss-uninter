@@ -1,6 +1,6 @@
-{% extends "emails/base_email.html" %}
+{% load static %}
+<link rel="stylesheet" href="/static/css/style.css">
 
-{% block content %}
 <h2>⏰ Lembrete de Consulta</h2>
 
 <p>Olá, <strong>{{ paciente_nome }}</strong>!</p>
@@ -35,4 +35,3 @@
 <p>Para cancelamentos, entre em contato com pelo menos 2 horas de antecedência.</p>
 
 <p>Atenciosamente,<br>Equipe VidaPlus Hospital</p>
-{% endblock %}

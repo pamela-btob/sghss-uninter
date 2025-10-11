@@ -2,7 +2,7 @@ from pathlib import Path
 import base64
 import os
 
-
+BASE_DIR = Path(__file__).resolve().parent.parent
 def generate_encryption_key():
     key = base64.urlsafe_b64encode(os.urandom(32))
     return key.decode("utf-8")
@@ -119,3 +119,12 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+STATIC_URL = '/static/'
+
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'), 
+]
+
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")

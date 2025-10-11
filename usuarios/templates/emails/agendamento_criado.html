@@ -1,6 +1,4 @@
-{% extends "emails/base_email.html" %}
-
-{% block content %}
+{% load static %}
 <h2>✅ Agendamento Confirmado</h2>
 
 <p>Olá, <strong>{{ paciente_nome }}</strong>!</p>
@@ -33,4 +31,3 @@
 <a href="#" class="button">Ver Detalhes do Agendamento</a>
 
 <p>Atenciosamente,<br>Equipe VidaPlus Hospital</p>
-{% endblock %}

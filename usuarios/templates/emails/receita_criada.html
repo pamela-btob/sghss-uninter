@@ -1,6 +1,5 @@
-{% extends "emails/base_email.html" %}
-
-{% block content %}
+{% load static %}
+<link rel="stylesheet" href="/static/css/style.css">
 <h2>💊 Nova Receita Médica</h2>
 
 <p>Olá, <strong>{{ paciente_nome }}</strong>!</p>
@@ -14,9 +13,9 @@
     <p><strong>Nº da Receita:</strong> #{{ receita_id }}</p>
 </div>
 
-{% if descricao %}
+
 <p><strong>Descrição:</strong><br>{{ descricao }}</p>
-{% endif %}
+
 
 <p><strong>⚠️ Importante:</strong></p>
 <ul>
@@ -29,4 +28,3 @@
 <a href="#" class="button">Visualizar Receita Completa</a>
 
 <p>Atenciosamente,<br>Equipe VidaPlus Hospital</p>
-{% endblock %}

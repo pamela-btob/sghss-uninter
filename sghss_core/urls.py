@@ -1,6 +1,9 @@
 from django.contrib import admin
+import os
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from django.conf import settings
+from django.conf.urls.static import static
+from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshView,)
 from usuarios.views import (
     user_registration, 
     user_profile, 
@@ -35,4 +38,8 @@ urlpatterns = [
     path('api/agendamentos/<int:pk>/cancelar/', cancelar_agendamento, name='cancelar-agendamento'),
     path('api/pacientes/<int:paciente_id>/historico/', historico_paciente, name='historico-paciente'),
     path('api/pacientes/historico/', historico_paciente, name='meu-historico'), 
+    path('', include('usuarios.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=os.path.join(settings.BASE_DIR, 'static'))

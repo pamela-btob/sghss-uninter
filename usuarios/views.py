@@ -1,4 +1,4 @@
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -6,7 +6,6 @@ from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Count
 from datetime import timedelta
-
 from .models import CustomUser, Agendamento, Prontuario, Exame, Receita
 from .serializers import (
     UserRegistrationSerializer,
@@ -22,9 +21,8 @@ from .notifications import (
 )
 
 
-def frontend(request):
-    return render(request, "frontend/index.html")
-
+def frontend_index(request):
+    return render(request, 'frontend/index.html')
 
 # Registrar o usuaário
 @api_view(["POST"])

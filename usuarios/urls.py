@@ -1,6 +1,10 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
+from .views import frontend_index
+from . import views
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from django.conf import settings
+from django.conf.urls.static import static
 from usuarios.views import (
     user_registration,
     user_profile,
@@ -10,7 +14,7 @@ from usuarios.views import (
     prontuario_detail,
     exame_list_create,
     exame_detail,
-    frontend,
+    frontend_index,
     dashboard_estatisticas,
     relatorio_agendamentos,
     relatorio_financeiro,
@@ -19,8 +23,7 @@ from usuarios.views import (
 )
 
 urlpatterns = [
-    path("", frontend, name="frontend"),
-    path("admin/", admin.site.urls),
+    path('', views.frontend_index, name='frontend-index'),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/usuarios/registro/", user_registration, name="user-registration"),
@@ -53,4 +56,8 @@ urlpatterns = [
         name="historico-paciente",
     ),
     path("api/pacientes/historico/", historico_paciente, name="meu-historico"),
+
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
