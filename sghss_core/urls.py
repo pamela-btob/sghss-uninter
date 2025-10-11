@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from frontend.views import frontend
 from usuarios.views import (
     user_registration, 
     user_profile, 
@@ -11,7 +10,6 @@ from usuarios.views import (
     prontuario_detail,
     exame_list_create,      
     exame_detail,           
-    frontend,
     dashboard_estatisticas,    
     relatorio_agendamentos,    
     relatorio_financeiro,
@@ -20,7 +18,6 @@ from usuarios.views import (
 )
 
 urlpatterns = [
-    path('', frontend, name='frontend'),
     path('admin/', admin.site.urls),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

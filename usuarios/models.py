@@ -322,6 +322,7 @@ class Receita(models.Model):
         return f"Receita {self.id} - {self.paciente.username} - {self.medico.username}"
     
     def esta_valida(self):
+    
         from django.utils import timezone
         return self.data_validade >= timezone.now().date() and self.status == 'ativa'
     
