@@ -1,4 +1,4 @@
-																															SGHSS - Sistema de Gestão Hospitalar e de Serviços de Saúde
+SGHSS - Sistema de Gestão Hospitalar e de Serviços de Saúde
 Sobre o Projeto
 Sistema completo de gestão hospitalar desenvolvido em Django REST Framework com foco em Back-end, incluindo autenticação JWT, criptografia de dados sensíveis (LGPD) e controle de acesso por perfis de usuário.
 
