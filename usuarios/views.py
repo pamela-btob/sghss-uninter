@@ -24,7 +24,7 @@ from .notifications import (
 def frontend_index(request):
     return render(request, 'frontend/index.html')
 
-# Registrar o usuaário
+# Registrar o usuario
 @api_view(["POST"])
 def user_registration(request):
     if request.method == "POST":
