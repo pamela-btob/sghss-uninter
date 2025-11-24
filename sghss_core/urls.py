@@ -17,8 +17,7 @@ from usuarios.views import (
     relatorio_agendamentos,    
     relatorio_financeiro,
     cancelar_agendamento,
-    historico_paciente,
-)
+    historico_paciente,)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
