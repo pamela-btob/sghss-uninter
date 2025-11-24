@@ -65,7 +65,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "sghss_core.wsgi.application"
 
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
