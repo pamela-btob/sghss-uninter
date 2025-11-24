@@ -24,7 +24,7 @@ from .notifications import (
 def frontend_index(request):
     return render(request, 'frontend/index.html')
 
-# Registrar o usuario
+#Registrar o usuario
 @api_view(["POST"])
 def user_registration(request):
     if request.method == "POST":
@@ -38,7 +38,7 @@ def user_registration(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Perfil do usuário
+#Perfil do usuário
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def user_profile(request):
@@ -53,7 +53,7 @@ def user_profile(request):
     )
 
 
-# Lista e cria os agendamentos
+#Lista e cria os agendamentos
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def agendamento_list_create(request):
@@ -87,7 +87,7 @@ def agendamento_list_create(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Detalehes do agendamento
+#Detalehes do agendamento
 @api_view(["GET", "PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
 def agendamento_detail(request, pk):
@@ -119,7 +119,7 @@ def agendamento_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# Cancela o agendamento
+#Cancela o agendamento
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def cancelar_agendamento(request, pk):
@@ -132,7 +132,7 @@ def cancelar_agendamento(request, pk):
             or (user.tipo_usuario == "P" and agendamento.paciente == user)
             or (user.tipo_usuario == "M" and agendamento.medico == user)
         )
-        # confirma o cancelamento conforme o usuário
+        #confirma o cancelamento conforme o usuário
         if not pode_cancelar:
             return Response(
                 {"error": "Você não tem permissão para cancelar este agendamento."},
@@ -152,7 +152,7 @@ def cancelar_agendamento(request, pk):
         agendamento.data_cancelamento = timezone.now()
         agendamento.save()
 
-        # Notificação de cancelamento
+        #Notificação de cancelamento
         try:
             notificar_agendamento_cancelado(
                 agendamento, agendamento.motivo_cancelamento
@@ -175,7 +175,7 @@ def cancelar_agendamento(request, pk):
         )
 
 
-# Criação de prontuários
+#Criação de prontuários
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def prontuario_list_create(request):
@@ -240,7 +240,7 @@ def prontuario_detail(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Requisição de exames
+#Requisição de exames
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def exame_list_create(request):
@@ -306,7 +306,7 @@ def exame_detail(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Dashboard do administrador
+#Dashboard do administrador
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def dashboard_estatisticas(request):
@@ -482,7 +482,7 @@ def relatorio_financeiro(request):
     return Response(relatorio_financeiro)
 
 
-# Histórico do paciente
+#Histórico do paciente
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def historico_paciente(request, paciente_id=None):
@@ -598,7 +598,7 @@ def historico_paciente(request, paciente_id=None):
         )
 
 
-# Receitas médicas
+#Receitas médicas
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def receita_list_create(request):
